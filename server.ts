@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
@@ -36,6 +37,12 @@ interface LocalDB {
   comments: any[];
   savedCalculations: any[];
   favorites: string[];
+  deploySettings?: {
+    githubToken?: string;
+    githubRepo?: string;
+    githubBranch?: string;
+    vercelDeployHook?: string;
+  };
 }
 
 const defaultDB: LocalDB = {
@@ -47,6 +54,12 @@ const defaultDB: LocalDB = {
   ],
   savedCalculations: [],
   favorites: ['loan-calculator', 'sip-calculator'],
+  deploySettings: {
+    githubToken: '',
+    githubRepo: '',
+    githubBranch: 'main',
+    vercelDeployHook: '',
+  },
 };
 
 function readDB(): LocalDB {
@@ -279,6 +292,166 @@ Formulas should be standard (e.g., compound interest, mortgage calculations, sal
   } catch (error: any) {
     console.error('Gemini NLP solver error:', error);
     res.status(500).json({ error: 'AI failed to solve query: ' + error.message });
+  }
+});
+
+// ==========================================
+// ADMIN DEPLOYMENT AND API AUTOMATION ENDPOINTS
+// ==========================================
+
+// Helper function to mask secret tokens for secure UI rendering
+function maskToken(token?: string): string {
+  if (!token) return '';
+  if (token.length <= 8) return '********';
+  return `${token.substring(0, 4)}...${token.substring(token.length - 4)}`;
+}
+
+// 6. Get Deployment configurations
+app.get('/api/admin/deploy-settings', (req, res) => {
+  const db = readDB();
+  const settings = db.deploySettings || {
+    githubToken: '',
+    githubRepo: '',
+    githubBranch: 'main',
+    vercelDeployHook: '',
+  };
+
+  res.json({
+    githubRepo: settings.githubRepo || '',
+    githubBranch: settings.githubBranch || 'main',
+    vercelDeployHook: settings.vercelDeployHook || '',
+    githubTokenMasked: maskToken(settings.githubToken),
+    hasGithubToken: !!settings.githubToken,
+  });
+});
+
+// 7. Save Deployment configurations
+app.post('/api/admin/deploy-settings', (req, res) => {
+  const { githubToken, githubRepo, githubBranch, vercelDeployHook } = req.body;
+  const db = readDB();
+
+  if (!db.deploySettings) {
+    db.deploySettings = {};
+  }
+
+  // Update only if provided, or retain existing if not modified (for token masking scenario)
+  if (githubToken !== undefined && githubToken !== '***RETAINED***') {
+    db.deploySettings.githubToken = githubToken;
+  }
+  if (githubRepo !== undefined) {
+    db.deploySettings.githubRepo = githubRepo;
+  }
+  if (githubBranch !== undefined) {
+    db.deploySettings.githubBranch = githubBranch || 'main';
+  }
+  if (vercelDeployHook !== undefined) {
+    db.deploySettings.vercelDeployHook = vercelDeployHook;
+  }
+
+  writeDB(db);
+  res.json({ success: true, message: 'Deployment settings saved successfully' });
+});
+
+// 8. Trigger Automated Deployment (Git pushing to GitHub or Vercel Webhook)
+app.post('/api/admin/deploy-trigger', async (req, res) => {
+  const { mode } = req.body; // 'github' or 'vercel'
+  const db = readDB();
+  const settings = db.deploySettings;
+
+  if (!settings) {
+    return res.status(400).json({ error: 'No deployment configurations found.' });
+  }
+
+  if (mode === 'vercel') {
+    const { vercelDeployHook } = settings;
+    if (!vercelDeployHook) {
+      return res.status(400).json({ error: 'Vercel Deploy Hook URL is not configured.' });
+    }
+
+    try {
+      const response = await fetch(vercelDeployHook, { method: 'POST' });
+      const responseText = await response.text();
+      return res.json({ 
+        success: true, 
+        message: 'Successfully triggered Vercel deployment hook!', 
+        details: responseText 
+      });
+    } catch (err: any) {
+      console.error('Error calling Vercel deploy hook:', err);
+      return res.status(500).json({ error: 'Failed to trigger Vercel deploy hook: ' + err.message });
+    }
+  } else if (mode === 'github') {
+    const { githubToken, githubRepo, githubBranch = 'main' } = settings;
+    if (!githubToken || !githubRepo) {
+      return res.status(400).json({ error: 'GitHub Personal Access Token and Repository must be configured.' });
+    }
+
+    try {
+      const cwd = process.cwd();
+      const runSafe = (cmd: string, secretToHide?: string) => {
+        try {
+          return execSync(cmd, { cwd, encoding: 'utf8', stdio: 'pipe' });
+        } catch (err: any) {
+          let errMsg = err.message || '';
+          if (secretToHide) {
+            errMsg = errMsg.split(secretToHide).join('[REDACTED_TOKEN]');
+          }
+          throw new Error(errMsg);
+        }
+      };
+
+      // Ensure it is a git repo
+      let hasGit = false;
+      try {
+        execSync('git rev-parse --is-inside-work-tree', { cwd, stdio: 'ignore' });
+        hasGit = true;
+      } catch (e) {}
+
+      if (!hasGit) {
+        runSafe('git init');
+      }
+
+      runSafe('git config user.name "YourCalculation Deployer"');
+      runSafe('git config user.email "sadikshaikh8367@gmail.com"');
+
+      // Set origin url with credentials
+      const remoteUrl = `https://x-access-token:${githubToken}@github.com/${githubRepo}.git`;
+      
+      try {
+        execSync('git remote remove origin', { cwd, stdio: 'ignore' });
+      } catch (e) {}
+
+      runSafe(`git remote add origin ${remoteUrl}`, githubToken);
+
+      // Stage all files
+      runSafe('git add .');
+
+      // Commit changes if any
+      let hasChanges = true;
+      try {
+        const status = execSync('git status --porcelain', { cwd, encoding: 'utf8' });
+        if (!status.trim()) {
+          hasChanges = false;
+        }
+      } catch (e) {}
+
+      if (hasChanges) {
+        runSafe('git commit -m "Auto-update from YourCalculation.com Workspace"');
+      }
+
+      // Push to target branch
+      runSafe(`git push -u origin ${githubBranch} --force`, githubToken);
+
+      return res.json({ 
+        success: true, 
+        message: `Successfully synchronized and pushed latest changes to GitHub branch "${githubBranch}"! Vercel will auto-build this commit.` 
+      });
+    } catch (err: any) {
+      console.error('Error pushing to GitHub:', err);
+      return res.status(500).json({ error: 'GitHub synchronization failed: ' + err.message });
+    }
+  } else {
+    return res.status(400).json({ error: 'Invalid deployment mode selected.' });
   }
 });
 

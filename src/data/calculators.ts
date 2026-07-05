@@ -1,14 +1,21 @@
 import { CalculatorConfig } from '../types';
 
 export const CATEGORIES = [
-  { name: 'Finance', description: 'Loans, investments, tax, savings, interest, and retirement planning.', icon: 'DollarSign', slug: 'finance' },
-  { name: 'Health', description: 'BMI, calories, body fat, water intake, and fitness calculators.', icon: 'Heart', slug: 'health' },
-  { name: 'Math', description: 'Percentages, fractions, LCM/HCF, scientific calculations, and solver engines.', icon: 'Percent', slug: 'math' },
-  { name: 'Date & Time', description: 'Age calculations, countdowns, date difference, and time tracking.', icon: 'Clock', slug: 'date-time' },
-  { name: 'Converters', description: 'Instant conversion of length, weight, area, temperature, and speed.', icon: 'Scale', slug: 'converters' },
-  { name: 'Programming', description: 'Binary, hex, decimal converters, hash generators, and formatters.', icon: 'Code', slug: 'programming' },
-  { name: 'Construction', description: 'Concrete, paint, brick, tiles, and flooring calculators.', icon: 'Wrench', slug: 'construction' },
-  { name: 'Engineering', description: 'Ohm\'s law, voltage, current, resistance, and electrical calculations.', icon: 'Cpu', slug: 'engineering' },
+  { name: 'Finance', description: 'Loans, investments, interest, and retirement planning.', icon: 'DollarSign', slug: 'finance' },
+  { name: 'Health', description: 'BMI, calories, body fat, and fitness tracking.', icon: 'Heart', slug: 'health' },
+  { name: 'Math', description: 'Percentages, geometry, algebra, and algebraic calculators.', icon: 'Percent', slug: 'math' },
+  { name: 'Date & Time', description: 'Countdowns, intervals, age, and date math.', icon: 'Clock', slug: 'date-time' },
+  { name: 'Converters', description: 'Distance, speed, weight, volume, and unit conversions.', icon: 'Scale', slug: 'converters' },
+  { name: 'Programming', description: 'Coding tools, base conversion, hashing, and regex.', icon: 'Code', slug: 'programming' },
+  { name: 'Construction', description: 'Paint, bricks, tile, and square footage solvers.', icon: 'Wrench', slug: 'construction' },
+  { name: 'Engineering', description: 'Ohms law, physics equations, and circuits.', icon: 'Cpu', slug: 'engineering' },
+  { name: 'Education', description: 'GPA, grade average, study hours, and academic tools.', icon: 'Award', slug: 'education' },
+  { name: 'Business', description: 'Margin, markup, profit, cost, and pricing calculators.', icon: 'Briefcase', slug: 'business' },
+  { name: 'Investment', description: 'SIP, compound interest, stock yields, and dividends.', icon: 'TrendingUp', slug: 'investment' },
+  { name: 'Tax', description: 'Sales tax, GST, income brackets, and deductions.', icon: 'Percent', slug: 'tax' },
+  { name: 'Fitness', description: 'Activity levels, target heart rate, and strength ratios.', icon: 'Activity', slug: 'fitness' },
+  { name: 'Daily Life', description: 'Unit pricing, kitchen conversions, and lifestyle choices.', icon: 'Compass', slug: 'daily-life' },
+  { name: 'Science', description: 'Chemistry, density, molarity, and force solvers.', icon: 'FlaskConical', slug: 'science' },
 ];
 
 export const CALCULATORS: CalculatorConfig[] = [
@@ -494,5 +501,375 @@ export const CALCULATORS: CalculatorConfig[] = [
       },
     },
     aiPromptTemplate: 'An individual wants to paint a room with {length} ft wall length, {height} ft wall height, applying {coats} coats. Total area is {totalArea} sq ft. Gallons needed: {gallons} ({liters} liters). Generate a professional paint masterclass checklist.',
+  },
+  {
+    id: 'emi-calculator',
+    name: 'EMI Loan Repayment Calculator',
+    category: 'Finance',
+    description: 'Calculate your Equated Monthly Installment (EMI) for home loans, car loans, or personal loans with interest breakdowns.',
+    icon: 'CreditCard',
+    fields: [
+      { name: 'amount', label: 'Loan Amount', type: 'number', defaultValue: 50000, min: 1000, max: 10000000, step: 1000, unit: '$' },
+      { name: 'rate', label: 'Annual Interest Rate', type: 'number', defaultValue: 7.9, min: 0.1, max: 50, step: 0.1, unit: '%' },
+      { name: 'tenure', label: 'Loan Tenure', type: 'number', defaultValue: 10, min: 1, max: 30, step: 1, unit: 'Years' },
+    ],
+    calculate: (inputs) => {
+      const p = Number(inputs.amount) || 0;
+      const r = (Number(inputs.rate) || 0) / 12 / 100;
+      const n = (Number(inputs.tenure) || 0) * 12;
+
+      if (p <= 0 || r < 0 || n <= 0) {
+        return { emi: 0, totalInterest: 0, totalPayment: 0, principalPercent: 0, interestPercent: 0 };
+      }
+
+      const emi = r === 0 ? p / n : (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      const totalPayment = emi * n;
+      const totalInterest = totalPayment - p;
+      const principalPercent = Math.round((p / totalPayment) * 100) || 0;
+      const interestPercent = 100 - principalPercent;
+
+      return {
+        emi: Math.round(emi * 100) / 100,
+        totalInterest: Math.round(totalInterest * 100) / 100,
+        totalPayment: Math.round(totalPayment * 100) / 100,
+        principalPercent,
+        interestPercent,
+      };
+    },
+    chartConfig: {
+      type: 'pie',
+      labels: {
+        amount: 'Principal Amount',
+        totalInterest: 'Total Interest',
+      },
+      colors: {
+        amount: '#3B82F6',
+        totalInterest: '#F59E0B',
+      },
+    },
+    aiPromptTemplate: 'Analyze a monthly EMI calculation of loan amount ${amount} at interest rate {rate}% for {tenure} years. Monthly EMI is ${emi}, total interest payable is ${totalInterest}. Offer structural amortization or refinancing advice.',
+  },
+  {
+    id: 'date-calculator',
+    name: 'Date Interval & Duration Calculator',
+    category: 'Date & Time',
+    description: 'Calculate the exact number of days, weeks, or months between two dates, or add/subtract days from a date.',
+    icon: 'Clock',
+    fields: [
+      { name: 'startDate', label: 'Start Date', type: 'text', defaultValue: '2026-01-01', placeholder: 'YYYY-MM-DD' },
+      { name: 'endDate', label: 'End Date', type: 'text', defaultValue: '2026-12-31', placeholder: 'YYYY-MM-DD' },
+      { name: 'daysToAdd', label: 'Add or Subtract Days (Optional)', type: 'number', defaultValue: 0, min: -10000, max: 10000, step: 1 },
+    ],
+    calculate: (inputs) => {
+      const start = new Date(inputs.startDate || '2026-01-01');
+      const end = new Date(inputs.endDate || '2026-12-31');
+      const daysToAdd = Number(inputs.daysToAdd) || 0;
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return { diffDays: 0, message: 'Invalid Date Format' };
+      }
+
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const weeks = Math.floor(diffDays / 7);
+      const remainingDays = diffDays % 7;
+
+      const addedDate = new Date(start);
+      addedDate.setDate(addedDate.getDate() + daysToAdd);
+      const addedDateStr = addedDate.toISOString().split('T')[0];
+
+      return {
+        diffDays,
+        weeks,
+        remainingDays,
+        addedDateStr,
+        daysToAdd,
+      };
+    },
+    chartConfig: {
+      type: 'comparison',
+      labels: {
+        diffDays: 'Days Interval',
+        weeks: 'Total Weeks',
+      },
+      colors: {
+        diffDays: '#8B5CF6',
+        weeks: '#10B981',
+      },
+    },
+    aiPromptTemplate: 'Explain a calendar calculation where interval between {startDate} and {endDate} is {diffDays} days ({weeks} weeks). Also, adding {daysToAdd} days to {startDate} results in {addedDateStr}. Offer a productivity timeline management perspective.',
+  },
+  {
+    id: 'calorie-calculator',
+    name: 'Calorie & BMR Intake Calculator',
+    category: 'Fitness',
+    description: 'Estimate your Basal Metabolic Rate (BMR) and daily calorie requirements based on your personal metrics.',
+    icon: 'Heart',
+    fields: [
+      { name: 'gender', label: 'Gender', type: 'select', defaultValue: 'male', options: [
+        { label: 'Male', value: 'male' },
+        { label: 'Female', value: 'female' },
+      ]},
+      { name: 'age', label: 'Age (Years)', type: 'number', defaultValue: 25, min: 1, max: 120, step: 1 },
+      { name: 'weight', label: 'Weight (kg)', type: 'number', defaultValue: 70, min: 10, max: 300, step: 1, unit: 'kg' },
+      { name: 'height', label: 'Height (cm)', type: 'number', defaultValue: 175, min: 50, max: 250, step: 1, unit: 'cm' },
+      { name: 'activity', label: 'Activity Level', type: 'select', defaultValue: 'moderate', options: [
+        { label: 'Sedentary (Little/No exercise)', value: 'sedentary' },
+        { label: 'Light (Exercise 1-3 days/week)', value: 'light' },
+        { label: 'Moderate (Exercise 3-5 days/week)', value: 'moderate' },
+        { label: 'Active (Hard exercise 6-7 days/week)', value: 'active' },
+      ]},
+    ],
+    calculate: (inputs) => {
+      const g = inputs.gender || 'male';
+      const age = Number(inputs.age) || 25;
+      const w = Number(inputs.weight) || 70;
+      const h = Number(inputs.height) || 175;
+      const act = inputs.activity || 'moderate';
+
+      if (age <= 0 || w <= 0 || h <= 0) {
+        return { bmr: 0, dailyCalories: 0 };
+      }
+
+      let bmr = 10 * w + 6.25 * h - 5 * age;
+      if (g === 'male') {
+        bmr += 5;
+      } else {
+        bmr -= 161;
+      }
+
+      const multipliers: Record<string, number> = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725,
+      };
+
+      const multiplier = multipliers[act] || 1.55;
+      const dailyCalories = bmr * multiplier;
+
+      return {
+        bmr: Math.round(bmr),
+        dailyCalories: Math.round(dailyCalories),
+        gainWeight: Math.round(dailyCalories + 500),
+        loseWeight: Math.round(dailyCalories - 500),
+      };
+    },
+    chartConfig: {
+      type: 'comparison',
+      labels: {
+        bmr: 'BMR (Resting Cal)',
+        dailyCalories: 'Maintain Weight (Cal)',
+        loseWeight: 'Lose 0.5kg/week (Cal)',
+        gainWeight: 'Gain 0.5kg/week (Cal)',
+      },
+      colors: {
+        bmr: '#6B7280',
+        dailyCalories: '#3B82F6',
+        loseWeight: '#EF4444',
+        gainWeight: '#10B981',
+      },
+    },
+    aiPromptTemplate: 'An individual of gender {gender}, age {age}, weight {weight}kg, height {height}cm has a resting BMR of {bmr} and daily calorie needs of {dailyCalories} for maintaining weight. Offer a clean, customized macronutrient meal guide with balanced protein, fat, and carbs.',
+  },
+  {
+    id: 'compound-interest-calculator',
+    name: 'Compound Interest Growth Calculator',
+    category: 'Investment',
+    description: 'Determine the compound interest growth of your principal amount over a custom period with recurring growth.',
+    icon: 'TrendingUp',
+    fields: [
+      { name: 'principal', label: 'Initial Investment', type: 'number', defaultValue: 10000, min: 100, max: 100000000, step: 100, unit: '$' },
+      { name: 'rate', label: 'Annual Interest Rate', type: 'number', defaultValue: 6.5, min: 0.1, max: 50, step: 0.1, unit: '%' },
+      { name: 'years', label: 'Period (Years)', type: 'number', defaultValue: 10, min: 1, max: 50, step: 1, unit: 'Years' },
+      { name: 'frequency', label: 'Compounding Frequency', type: 'select', defaultValue: '12', options: [
+        { label: 'Annually (1/yr)', value: '1' },
+        { label: 'Semi-Annually (2/yr)', value: '2' },
+        { label: 'Quarterly (4/yr)', value: '4' },
+        { label: 'Monthly (12/yr)', value: '12' },
+      ]},
+    ],
+    calculate: (inputs) => {
+      const p = Number(inputs.principal) || 0;
+      const r = (Number(inputs.rate) || 0) / 100;
+      const t = Number(inputs.years) || 0;
+      const n = Number(inputs.frequency) || 1;
+
+      if (p <= 0 || r < 0 || t <= 0) {
+        return { totalBalance: 0, interestGained: 0, principalPercent: 0, interestPercent: 0 };
+      }
+
+      const totalBalance = p * Math.pow(1 + r / n, n * t);
+      const interestGained = totalBalance - p;
+      const principalPercent = Math.round((p / totalBalance) * 100) || 0;
+      const interestPercent = 100 - principalPercent;
+
+      return {
+        totalBalance: Math.round(totalBalance * 100) / 100,
+        interestGained: Math.round(interestGained * 100) / 100,
+        investedAmount: p,
+        principalPercent,
+        interestPercent,
+      };
+    },
+    chartConfig: {
+      type: 'pie',
+      labels: {
+        investedAmount: 'Principal Amount',
+        interestGained: 'Compound Interest Earned',
+      },
+      colors: {
+        investedAmount: '#3B82F6',
+        interestGained: '#10B981',
+      },
+    },
+    aiPromptTemplate: 'Explain compound interest on initial principal ${principal} at {rate}% compounded {frequency} times a year for {years} years. Final value is ${totalBalance} with gains of ${interestGained}. Discuss the "Rule of 72" in wealth building.',
+  },
+  {
+    id: 'mortgage-calculator',
+    name: 'Mortgage Home Loan Calculator',
+    category: 'Finance',
+    description: 'Calculate your total monthly mortgage payment including principal, interest, taxes, and home insurance.',
+    icon: 'Home',
+    fields: [
+      { name: 'homeValue', label: 'Home Purchase Price', type: 'number', defaultValue: 350000, min: 10000, max: 10000000, step: 5000, unit: '$' },
+      { name: 'downPayment', label: 'Down Payment Amount', type: 'number', defaultValue: 70000, min: 0, max: 10000000, step: 1000, unit: '$' },
+      { name: 'rate', label: 'Annual Interest Rate', type: 'number', defaultValue: 6.8, min: 0.1, max: 30, step: 0.1, unit: '%' },
+      { name: 'tenure', label: 'Mortgage Term', type: 'number', defaultValue: 30, min: 5, max: 40, step: 1, unit: 'Years' },
+    ],
+    calculate: (inputs) => {
+      const price = Number(inputs.homeValue) || 0;
+      const down = Number(inputs.downPayment) || 0;
+      const rAnnual = Number(inputs.rate) || 0;
+      const tenure = Number(inputs.tenure) || 30;
+
+      const p = Math.max(0, price - down);
+      const r = rAnnual / 12 / 100;
+      const n = tenure * 12;
+
+      let piPayment = 0;
+      if (p > 0) {
+        piPayment = r === 0 ? p / n : (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+      }
+
+      const taxMonthly = (price * 0.0125) / 12;
+      const insMonthly = 100;
+
+      const totalMonthly = piPayment + taxMonthly + insMonthly;
+
+      return {
+        monthlyPI: Math.round(piPayment * 100) / 100,
+        monthlyTax: Math.round(taxMonthly * 100) / 100,
+        monthlyInsurance: Math.round(insMonthly * 100) / 100,
+        totalMonthly: Math.round(totalMonthly * 100) / 100,
+        loanAmount: p,
+      };
+    },
+    chartConfig: {
+      type: 'comparison',
+      labels: {
+        monthlyPI: 'Principal & Interest ($)',
+        monthlyTax: 'Property Tax ($)',
+        monthlyInsurance: 'Home Insurance ($)',
+      },
+      colors: {
+        monthlyPI: '#2563EB',
+        monthlyTax: '#EF4444',
+        monthlyInsurance: '#F59E0B',
+      },
+    },
+    aiPromptTemplate: 'Analyze a home purchase price ${homeValue} with down payment ${downPayment} leading to mortgage loan ${loanAmount} at {rate}% annual interest for {tenure} years. Monthly payment including taxes & insurance is ${totalMonthly}. Give custom recommendations on home buying and escrow strategies.',
+  },
+  {
+    id: 'profit-calculator',
+    name: 'Business Profit Margin Calculator',
+    category: 'Business',
+    description: 'Determine gross profit margins, markup percentages, and total profit margins for retail or wholesale pricing models.',
+    icon: 'Percent',
+    fields: [
+      { name: 'cost', label: 'Item Cost Price', type: 'number', defaultValue: 60, min: 0.01, max: 1000000, step: 1, unit: '$' },
+      { name: 'sellingPrice', label: 'Selling Price (Revenue)', type: 'number', defaultValue: 100, min: 0.01, max: 1000000, step: 1, unit: '$' },
+    ],
+    calculate: (inputs) => {
+      const c = Number(inputs.cost) || 0;
+      const s = Number(inputs.sellingPrice) || 0;
+
+      if (s <= 0) {
+        return { grossProfit: 0, margin: 0, markup: 0 };
+      }
+
+      const grossProfit = s - c;
+      const margin = (grossProfit / s) * 100;
+      const markup = c === 0 ? 100 : (grossProfit / c) * 100;
+
+      return {
+        grossProfit: Math.round(grossProfit * 100) / 100,
+        margin: Math.round(margin * 10) / 10,
+        markup: Math.round(markup * 10) / 10,
+        cost: c,
+      };
+    },
+    chartConfig: {
+      type: 'pie',
+      labels: {
+        cost: 'Item Cost',
+        grossProfit: 'Gross Profit Margin',
+      },
+      colors: {
+        cost: '#6B7280',
+        grossProfit: '#10B981',
+      },
+    },
+    aiPromptTemplate: 'Explain pricing structure where item cost is ${cost} and selling price is ${sellingPrice}, generating profit of ${grossProfit} with profit margin {margin}% and markup {markup}%. Offer competitive advice on how to improve this pricing model.',
+  },
+  {
+    id: 'tax-calculator',
+    name: 'Income Tax Slab Calculator',
+    category: 'Tax',
+    description: 'Calculate estimated annual income tax liability and effective tax rates based on simplified brackets.',
+    icon: 'Percent',
+    fields: [
+      { name: 'income', label: 'Annual Gross Income', type: 'number', defaultValue: 75000, min: 100, max: 10000000, step: 1000, unit: '$' },
+      { name: 'deductions', label: 'Standard Deductions', type: 'number', defaultValue: 13850, min: 0, max: 1000000, step: 50, unit: '$' },
+    ],
+    calculate: (inputs) => {
+      const gross = Number(inputs.income) || 0;
+      const ded = Number(inputs.deductions) || 0;
+
+      const taxable = Math.max(0, gross - ded);
+
+      let tax = 0;
+      if (taxable > 95375) {
+        tax += (taxable - 95375) * 0.24 + (95375 - 44725) * 0.22 + (44725 - 11000) * 0.12 + 11000 * 0.10;
+      } else if (taxable > 44725) {
+        tax += (taxable - 44725) * 0.22 + (44725 - 11000) * 0.12 + 11000 * 0.10;
+      } else if (taxable > 11000) {
+        tax += (taxable - 11000) * 0.12 + 11000 * 0.10;
+      } else {
+        tax += taxable * 0.10;
+      }
+
+      const netIncome = gross - tax;
+      const effectiveRate = gross === 0 ? 0 : (tax / gross) * 100;
+
+      return {
+        taxableIncome: Math.round(taxable),
+        taxLiability: Math.round(tax),
+        netTakeHome: Math.round(netIncome),
+        effectiveTaxRate: Math.round(effectiveRate * 10) / 10,
+      };
+    },
+    chartConfig: {
+      type: 'pie',
+      labels: {
+        taxLiability: 'Tax Paid to Government',
+        netTakeHome: 'Net Take-Home Income',
+      },
+      colors: {
+        taxLiability: '#EF4444',
+        netTakeHome: '#10B981',
+      },
+    },
+    aiPromptTemplate: 'Analyze simplified federal income tax for annual income of ${income} with deductions of ${deductions}. Taxable income is ${taxableIncome}, estimated tax liability is ${taxLiability}, take-home is ${netTakeHome} (effective rate: {effectiveTaxRate}%). Give 3 legitimate tax shelter strategies.',
   },
 ];

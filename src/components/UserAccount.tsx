@@ -4,6 +4,7 @@ import {
   ChevronRight, Calendar, Calculator, ShieldCheck, Mail, LogIn, Award 
 } from 'lucide-react';
 import { CalculatorConfig, SavedCalculation } from '../types';
+import { navigate } from '../lib/router';
 
 interface UserAccountProps {
   favorites: string[];
@@ -17,7 +18,9 @@ export default function UserAccount({
 }: UserAccountProps) {
   
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState<'favorites' | 'history'>('favorites');
+  const [activeTab, setActiveTab] = useState<'favorites' | 'history'>(() => {
+    return window.location.pathname === '/recent' ? 'history' : 'favorites';
+  });
   const [history, setHistory] = useState<SavedCalculation[]>([]);
   const [selectedSavedCalc, setSelectedSavedCalc] = useState<SavedCalculation | null>(null);
 
@@ -26,6 +29,15 @@ export default function UserAccount({
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [submittingUser, setSubmittingUser] = useState(false);
+
+  // Synchronize tab with pathname changes
+  useEffect(() => {
+    const handlePathTabSync = () => {
+      setActiveTab(window.location.pathname === '/recent' ? 'history' : 'favorites');
+    };
+    window.addEventListener('popstate', handlePathTabSync);
+    return () => window.removeEventListener('popstate', handlePathTabSync);
+  }, []);
 
   // Load history from API
   useEffect(() => {
@@ -280,7 +292,7 @@ export default function UserAccount({
 
               <div className="mt-6 flex justify-end gap-2">
                 <button
-                  onClick={() => onSelectCalculator(selectedSavedCalc.calculatorId, selectedSavedCalc.inputs)}
+                  onClick={() => navigate(`/${selectedSavedCalc.calculatorId}?inputs=${encodeURIComponent(JSON.stringify(selectedSavedCalc.inputs))}`)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1"
                 >
                   Load Inputs into Calculator <ChevronRight className="h-3.5 w-3.5" />
@@ -293,13 +305,13 @@ export default function UserAccount({
           <div>
             <div className="flex border-b border-slate-100 dark:border-slate-800 gap-4 mb-6">
               <button
-                onClick={() => setActiveTab('favorites')}
+                onClick={() => navigate('/favorites')}
                 className={`pb-3 text-sm font-semibold flex items-center gap-1.5 border-b-2 transition-all ${activeTab === 'favorites' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
               >
                 <Star className="h-4 w-4" /> Bookmarked Favorites ({favoriteCalcs.length})
               </button>
               <button
-                onClick={() => setActiveTab('history')}
+                onClick={() => navigate('/recent')}
                 className={`pb-3 text-sm font-semibold flex items-center gap-1.5 border-b-2 transition-all ${activeTab === 'history' ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
               >
                 <History className="h-4 w-4" /> Calculation History ({history.length})
@@ -314,7 +326,7 @@ export default function UserAccount({
                     {favoriteCalcs.map((calc) => (
                       <div
                         key={calc.id}
-                        onClick={() => onSelectCalculator(calc.id)}
+                        onClick={() => navigate(`/${calc.id}`)}
                         className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md cursor-pointer transition-all flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CALCULATORS, CATEGORIES } from './data/calculators';
+import { BLOG_POSTS } from './data/blog';
 import { CalculatorConfig } from './types';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -9,9 +10,15 @@ import AIChatView from './components/AIChatView';
 import BlogView from './components/BlogView';
 import UserAccount from './components/UserAccount';
 import AdminPanel from './components/AdminPanel';
+import CategoryView from './components/CategoryView';
+import { 
+  AboutView, ContactView, PrivacyView, TermsView, DisclaimerView, NotFoundView 
+} from './components/StaticPages';
+import { navigate } from './lib/router';
 import { 
   DollarSign, Heart, Percent, Clock, Scale, Code, 
-  Wrench, Cpu, Star, Award, Search, Sparkles, ShieldCheck 
+  Wrench, Cpu, Star, Award, Search, Sparkles, ShieldCheck,
+  TrendingUp, Briefcase, Activity, Compass, FlaskConical
 } from 'lucide-react';
 
 // Maps category names to Lucide icons
@@ -24,55 +31,132 @@ const categoryIconMap: Record<string, any> = {
   'Programming': Code,
   'Construction': Wrench,
   'Engineering': Cpu,
+  'Education': Award,
+  'Business': Briefcase,
+  'Investment': TrendingUp,
+  'Tax': Percent,
+  'Fitness': Activity,
+  'Daily Life': Compass,
+  'Science': FlaskConical,
 };
 
 export default function App() {
-  const [view, setView] = useState<string>('home'); // 'home' | 'calculator' | 'ai-assistant' | 'blog' | 'account' | 'admin'
-  const [selectedCalculatorId, setSelectedCalculatorId] = useState<string | null>(null);
-  const [preloadedInputs, setPreloadedInputs] = useState<Record<string, any> | null>(null);
-  
-  // Favorites State synced with API
+  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
   const [favorites, setFavorites] = useState<string[]>([]);
-  
-  // Quick Filter for Home Page Category Grid
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
-
-  // Search input on the Home Page hero
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  const [preloadedInputs, setPreloadedInputs] = useState<Record<string, any> | null>(null);
 
-  // 1. Load favorites and check for shareable URL query parameters on startup
+  // 1. Initialize favorites on startup
   useEffect(() => {
-    // Fetch favorites
     fetch('/api/favorites')
       .then((res) => res.json())
       .then((data) => setFavorites(data))
       .catch((err) => console.error('Error fetching initial favorites:', err));
-
-    // Handle shareable preloaded inputs via query parameters
-    const params = new URLSearchParams(window.location.search);
-    const calcId = params.get('calc');
-    const inputsStr = params.get('inputs');
-
-    if (calcId) {
-      const matching = CALCULATORS.find((c) => c.id === calcId);
-      if (matching) {
-        setSelectedCalculatorId(calcId);
-        setView('calculator');
-        if (inputsStr) {
-          try {
-            const parsed = JSON.parse(decodeURIComponent(inputsStr));
-            setPreloadedInputs(parsed);
-          } catch (e) {
-            console.error('Failed to parse preloaded query inputs:', e);
-          }
-        }
-      }
-    }
   }, []);
 
-  // 2. Toggle Favorite Handler
+  // 2. Synchronize currentPath state and query parameters with browser navigation changes (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      
+      // Load preloaded inputs from query parameters if present
+      const params = new URLSearchParams(window.location.search);
+      const inputsStr = params.get('inputs');
+      if (inputsStr) {
+        try {
+          setPreloadedInputs(JSON.parse(decodeURIComponent(inputsStr)));
+        } catch (e) {
+          console.error('Failed to parse inputs from query parameters:', e);
+        }
+      } else {
+        setPreloadedInputs(null);
+      }
+    };
+
+    handlePopState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 3. Dynamic SEO and Title Management
+  useEffect(() => {
+    let title = 'YourCalculation.com - Calculate Anything Smarter with AI';
+    let description = 'Free online calculators with instant results and AI-powered explanations. Calculate loan EMI, compound interest, BMI, Ohm\'s law, and more.';
+
+    if (currentPath === '/about') {
+      title = 'About Us - YourCalculation.com';
+      description = 'Discover our mission, accuracy verifications, and how we integrate secure server-side Gemini AI into dynamic calculations.';
+    } else if (currentPath === '/contact') {
+      title = 'Contact Support - YourCalculation.com';
+      description = 'Get in touch with our team for general feedback, custom calculation queries, or site help.';
+    } else if (currentPath === '/privacy-policy') {
+      title = 'Privacy Policy - YourCalculation.com';
+      description = 'Learn how YourCalculation.com processes and secures your calculation history with strict privacy safeguards.';
+    } else if (currentPath === '/terms-and-conditions') {
+      title = 'Terms & Conditions - YourCalculation.com';
+      description = 'Review the standard terms of service, limits of liability, and instructional guidelines for YourCalculation.com.';
+    } else if (currentPath === '/disclaimer') {
+      title = 'Legal Disclaimer - YourCalculation.com';
+      description = 'Vetted disclaimer clarifying that calculation results are for instructional use and do not substitute certified advice.';
+    } else if (currentPath === '/ai-assistant') {
+      title = 'AI Calculation Assistant - YourCalculation.com';
+      description = 'Chat with our advanced NLP AI companion to simulate scenarios, solve complex mathematical puzzles, or get tips.';
+    } else if (currentPath === '/blog') {
+      title = 'Calculators & Math Masterclass Blog - YourCalculation.com';
+      description = 'Browse our financial and scientific guides to master interest compounding, amortization schedules, and fitness variables.';
+    } else if (currentPath.startsWith('/blog/')) {
+      const postId = currentPath.split('/blog/')[1];
+      const post = BLOG_POSTS.find(p => p.id === postId);
+      if (post) {
+        title = `${post.title} - YourCalculation.com`;
+        description = post.excerpt;
+      }
+    } else if (currentPath === '/favorites') {
+      title = 'My Bookmarked Favorites - YourCalculation.com';
+      description = 'Access your personalized dashboard of saved and favorited calculators.';
+    } else if (currentPath === '/recent') {
+      title = 'Calculation History - YourCalculation.com';
+      description = 'Track, search, and reload your previous calculations with secure storage logs.';
+    } else if (currentPath === '/admin') {
+      title = 'Admin Panel - YourCalculation.com';
+      description = 'System dashboard for deploying configurations, checking server stats, and triggering pipelines.';
+    } else if (currentPath === '/categories') {
+      title = 'Calculator Categories - YourCalculation.com';
+      description = 'Explore our massive directory of calculators covering Finance, Health, Programming, Construction, and more.';
+    } else if (currentPath.startsWith('/categories/')) {
+      const slug = currentPath.split('/categories/')[1];
+      const category = CATEGORIES.find(c => c.slug === slug);
+      if (category) {
+        title = `${category.name} Calculators - YourCalculation.com`;
+        description = category.description;
+      }
+    } else {
+      const calcId = currentPath.slice(1);
+      const calc = CALCULATORS.find(c => c.id === calcId);
+      if (calc) {
+        title = `${calc.name} - Free AI Calculator - YourCalculation.com`;
+        description = `${calc.description} Get step-by-step calculations, dynamic charts, and AI-powered advice instantly.`;
+      } else if (currentPath !== '/') {
+        title = 'Page Not Found - YourCalculation.com';
+        description = 'The requested calculator page or URL could not be located.';
+      }
+    }
+
+    document.title = title;
+    
+    // Update or create meta description dynamically for search engines
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', description);
+  }, [currentPath]);
+
+  // 4. Toggle Favorite Handler
   const handleToggleFavorite = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Avoid triggering calculator select click
+    e.stopPropagation();
     try {
       const response = await fetch('/api/favorites/toggle', {
         method: 'POST',
@@ -88,31 +172,17 @@ export default function App() {
     }
   };
 
-  const handleSelectCalculator = (id: string, customInputs?: Record<string, any>) => {
-    setSelectedCalculatorId(id);
-    setPreloadedInputs(customInputs || null);
-    setView('calculator');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // Determine active calculator matching ID route e.g. "/loan-calculator"
+  const calcRouteId = currentPath.slice(1);
+  const matchedCalculator = CALCULATORS.find((c) => c.id === calcRouteId);
 
-  const handleBackToHome = () => {
-    setSelectedCalculatorId(null);
-    setPreloadedInputs(null);
-    setView('home');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const activeCalculatorConfig = CALCULATORS.find((c) => c.id === selectedCalculatorId);
-
-  // Filter calculations based on Home Grid category or Hero query search
+  // Filter calculations based on Hero query search
   const filteredCalculators = CALCULATORS.filter((calc) => {
-    const matchesCategory = selectedCategoryFilter ? calc.category === selectedCategoryFilter : true;
-    const matchesSearch = homeSearchQuery.trim()
+    return homeSearchQuery.trim()
       ? calc.name.toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
         calc.category.toLowerCase().includes(homeSearchQuery.toLowerCase()) ||
         calc.description.toLowerCase().includes(homeSearchQuery.toLowerCase())
       : true;
-    return matchesCategory && matchesSearch;
   });
 
   return (
@@ -120,17 +190,15 @@ export default function App() {
       
       {/* Header element */}
       <Header 
-        currentView={view} 
-        setView={setView} 
-        setSelectedCalculatorId={setSelectedCalculatorId} 
+        currentPath={currentPath} 
         calculators={CALCULATORS}
         favoritesCount={favorites.length}
       />
 
       <main className="flex-grow">
         
-        {/* VIEW 1: HOME PAGE */}
-        {view === 'home' && (
+        {/* ROUTE 1: HOMEPAGE */}
+        {currentPath === '/' && (
           <div className="animate-in fade-in duration-300">
             
             {/* Hero Section */}
@@ -148,7 +216,7 @@ export default function App() {
                   <span className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">Smarter with AI</span>
                 </h1>
                 
-                <p className="text-base sm:text-lg text-slate-400 dark:text-slate-500 mt-6 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-sm sm:text-base text-slate-400 dark:text-slate-500 mt-6 max-w-2xl mx-auto leading-relaxed">
                   Free online calculators with instant results and AI-powered explanations. Get smart financial, fitness, and physical circuit tips instantly.
                 </p>
 
@@ -177,18 +245,18 @@ export default function App() {
                 {/* Fast Action Buttons */}
                 <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
                   <button 
-                    onClick={() => setView('ai-assistant')}
+                    onClick={() => navigate('/ai-assistant')}
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-1.5"
                   >
                     <Sparkles className="h-4 w-4 text-amber-300 fill-amber-300" />
                     Ask AI Assistant
                   </button>
-                  <a 
-                    href="#categories" 
+                  <button 
+                    onClick={() => navigate('/categories')} 
                     className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-all"
                   >
                     Browse Categories
-                  </a>
+                  </button>
                 </div>
 
               </div>
@@ -219,61 +287,49 @@ export default function App() {
             {/* Category Grid Section */}
             <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 scroll-mt-20">
               <div className="mb-8">
-                <h2 className="font-display font-bold text-lg text-slate-800 dark:text-white uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                <h2 className="font-display font-bold text-lg text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1">
                   Browse by Category
                 </h2>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  Select a category block to filter matching dynamic calculation models instantly.
+                  Select a category block to explore dedicated, matching dynamic calculation lists.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-                {/* Reset filter card */}
-                <div
-                  onClick={() => setSelectedCategoryFilter(null)}
-                  className={`p-4 rounded-2xl border text-center cursor-pointer transition-all ${!selectedCategoryFilter ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-500/20 hover:-translate-y-0.5'}`}
-                >
-                  <Award className="h-5 w-5 mx-auto mb-2" />
-                  <span className="text-xs font-bold font-display block truncate">All Slabs</span>
-                </div>
-
-                {CATEGORIES.map((cat) => {
+                {CATEGORIES.slice(0, 8).map((cat) => {
                   const Icon = categoryIconMap[cat.name] || DollarSign;
-                  const isSelected = selectedCategoryFilter === cat.name;
                   
                   return (
                     <div
                       key={cat.slug}
-                      onClick={() => setSelectedCategoryFilter(cat.name)}
-                      className={`p-4 rounded-2xl border text-center cursor-pointer transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-500/20 hover:-translate-y-0.5'}`}
+                      onClick={() => navigate(`/categories/${cat.slug}`)}
+                      className="p-4 rounded-2xl border text-center cursor-pointer transition-all bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-blue-500/20 hover:-translate-y-0.5"
                     >
-                      <Icon className="h-5 w-5 mx-auto mb-2" />
+                      <Icon className="h-5 w-5 mx-auto mb-2 text-blue-500" />
                       <span className="text-xs font-bold font-display block truncate">{cat.name}</span>
                     </div>
                   );
                 })}
+                {/* Explore all block */}
+                <div
+                  onClick={() => navigate('/categories')}
+                  className="p-4 rounded-2xl border text-center cursor-pointer transition-all bg-blue-50 border-blue-100 dark:bg-slate-900 dark:border-slate-800 text-blue-600 dark:text-blue-400 hover:border-blue-500/35 hover:-translate-y-0.5"
+                >
+                  <Award className="h-5 w-5 mx-auto mb-2" />
+                  <span className="text-xs font-bold font-display block truncate">View All Slabs</span>
+                </div>
               </div>
             </section>
 
             {/* Popular Calculators Card Grid */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="font-display font-bold text-xl text-slate-900 dark:text-white">
-                    {selectedCategoryFilter ? `${selectedCategoryFilter} Calculators` : 'Popular Calculation Tools'}
-                  </h2>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                    Beautiful card-layouts configured with responsive slider-bars and visual breakdown charts.
-                  </p>
-                </div>
-                {selectedCategoryFilter && (
-                  <button 
-                    onClick={() => setSelectedCategoryFilter(null)}
-                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Clear Filter
-                  </button>
-                )}
+              <div className="mb-8">
+                <h2 className="font-display font-bold text-xl text-slate-900 dark:text-white">
+                  Popular Calculation Tools
+                </h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  Beautiful card-layouts configured with responsive sliders and visual breakdown charts.
+                </p>
               </div>
 
               {filteredCalculators.length > 0 ? (
@@ -284,7 +340,7 @@ export default function App() {
                       config={calc}
                       isFavorite={favorites.includes(calc.id)}
                       onToggleFavorite={handleToggleFavorite}
-                      onSelect={(id) => handleSelectCalculator(id)}
+                      onSelect={(id) => navigate(`/${id}`)}
                     />
                   ))}
                 </div>
@@ -292,7 +348,7 @@ export default function App() {
                 <div className="text-center p-16 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm">
                   <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                   <h3 className="font-display font-bold text-base text-slate-800 dark:text-slate-200">No calculators found</h3>
-                  <p className="text-xs text-slate-400 mt-1">We couldn't find matching models in the "{selectedCategoryFilter || 'General'}" view.</p>
+                  <p className="text-xs text-slate-400 mt-1">We couldn't find matching models.</p>
                 </div>
               )}
             </section>
@@ -300,56 +356,95 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 2: CALCULATOR DETAIL PAGE */}
-        {view === 'calculator' && activeCalculatorConfig && (
-          <CalculatorView
-            config={{
-              ...activeCalculatorConfig,
-              fields: activeCalculatorConfig.fields.map((f) => ({
-                ...f,
-                defaultValue: preloadedInputs && preloadedInputs[f.name] !== undefined ? preloadedInputs[f.name] : f.defaultValue,
-              })),
-            }}
-            isFavorite={favorites.includes(activeCalculatorConfig.id)}
-            onToggleFavorite={handleToggleFavorite}
-            onBack={handleBackToHome}
-            allCalculators={CALCULATORS}
-            onSelectCalculator={(id) => handleSelectCalculator(id)}
-          />
+        {/* ROUTE 2: ABOUT PAGE */}
+        {currentPath === '/about' && <AboutView />}
+
+        {/* ROUTE 3: CONTACT PAGE */}
+        {currentPath === '/contact' && <ContactView />}
+
+        {/* ROUTE 4: PRIVACY POLICY */}
+        {currentPath === '/privacy-policy' && <PrivacyView />}
+
+        {/* ROUTE 5: TERMS & CONDITIONS */}
+        {currentPath === '/terms-and-conditions' && <TermsView />}
+
+        {/* ROUTE 6: DISCLAIMER */}
+        {currentPath === '/disclaimer' && <DisclaimerView />}
+
+        {/* ROUTE 7: AI PLAYGROUND CHAT */}
+        {currentPath === '/ai-assistant' && <AIChatView />}
+
+        {/* ROUTE 8: BLOG PATHS */}
+        {currentPath.startsWith('/blog') && (
+          <BlogView calculators={CALCULATORS} />
         )}
 
-        {/* VIEW 3: AI PLAYGROUND CHAT */}
-        {view === 'ai-assistant' && <AIChatView />}
-
-        {/* VIEW 4: SEO BLOG GUIDE */}
-        {view === 'blog' && (
-          <BlogView 
-            onSelectCalculator={(id) => handleSelectCalculator(id)} 
-            calculators={CALCULATORS}
-          />
-        )}
-
-        {/* VIEW 5: USER ACCOUNT PROFILE */}
-        {view === 'account' && (
+        {/* ROUTE 9: FAVORITES & RECENT HISTORY */}
+        {(currentPath === '/favorites' || currentPath === '/recent') && (
           <UserAccount
             favorites={favorites}
             calculators={CALCULATORS}
             onToggleFavorite={handleToggleFavorite}
-            onSelectCalculator={(id, customInputs) => handleSelectCalculator(id, customInputs)}
+            onSelectCalculator={(id, customInputs) => {
+              const q = customInputs ? `?inputs=${encodeURIComponent(JSON.stringify(customInputs))}` : '';
+              navigate(`/${id}${q}`);
+            }}
           />
         )}
 
-        {/* VIEW 6: ADMIN CONTROL DASHBOARD */}
-        {view === 'admin' && <AdminPanel calculators={CALCULATORS} />}
+        {/* ROUTE 10: ADMIN DASHBOARD */}
+        {currentPath === '/admin' && <AdminPanel calculators={CALCULATORS} />}
+
+        {/* ROUTE 11: CATEGORIES & CATEGORY DETAIL */}
+        {currentPath.startsWith('/categories') && (
+          <CategoryView 
+            currentPath={currentPath}
+            favorites={favorites}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        )}
+
+        {/* ROUTE 12: DYNAMIC CALCULATOR DETAIL PAGE */}
+        {matchedCalculator && (
+          <CalculatorView
+            config={{
+              ...matchedCalculator,
+              fields: matchedCalculator.fields.map((f) => ({
+                ...f,
+                defaultValue: preloadedInputs && preloadedInputs[f.name] !== undefined ? preloadedInputs[f.name] : f.defaultValue,
+              })),
+            }}
+            isFavorite={favorites.includes(matchedCalculator.id)}
+            onToggleFavorite={handleToggleFavorite}
+            onBack={() => navigate('/')}
+            allCalculators={CALCULATORS}
+            onSelectCalculator={(id) => navigate(`/${id}`)}
+          />
+        )}
+
+        {/* ROUTE 13: 404 NOT FOUND fallback */}
+        {currentPath !== '/' &&
+         currentPath !== '/about' &&
+         currentPath !== '/contact' &&
+         currentPath !== '/privacy-policy' &&
+         currentPath !== '/terms-and-conditions' &&
+         currentPath !== '/disclaimer' &&
+         currentPath !== '/ai-assistant' &&
+         !currentPath.startsWith('/blog') &&
+         currentPath !== '/favorites' &&
+         currentPath !== '/recent' &&
+         currentPath !== '/admin' &&
+         !currentPath.startsWith('/categories') &&
+         !matchedCalculator && (
+          <NotFoundView />
+        )}
 
       </main>
 
       {/* Footer element */}
       <Footer 
-        currentView={view} 
-        selectedCalculatorName={activeCalculatorConfig?.name}
-        setView={setView} 
-        setSelectedCalculatorId={setSelectedCalculatorId}
+        currentPath={currentPath} 
+        selectedCalculatorName={matchedCalculator?.name}
       />
 
     </div>

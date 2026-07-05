@@ -1,23 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BLOG_POSTS } from '../data/blog';
 import { BlogPost, CalculatorConfig } from '../types';
 import { Clock, User, ArrowLeft, ArrowRight, Play, BookOpen } from 'lucide-react';
+import { navigate } from '../lib/router';
 
 interface BlogViewProps {
-  onSelectCalculator: (id: string) => void;
   calculators: CalculatorConfig[];
 }
 
-export default function BlogView({ onSelectCalculator, calculators }: BlogViewProps) {
+export default function BlogView({ calculators }: BlogViewProps) {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
+  useEffect(() => {
+    const handlePopStateSync = () => {
+      const parts = window.location.pathname.split('/blog/');
+      if (parts.length > 1) {
+        const slug = parts[1];
+        const matching = BLOG_POSTS.find((p) => p.id === slug);
+        if (matching) {
+          setSelectedPost(matching);
+        } else {
+          setSelectedPost(null);
+        }
+      } else {
+        setSelectedPost(null);
+      }
+    };
+
+    handlePopStateSync();
+    window.addEventListener('popstate', handlePopStateSync);
+    return () => window.removeEventListener('popstate', handlePopStateSync);
+  }, []);
+
   const handlePostClick = (post: BlogPost) => {
-    setSelectedPost(post);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate(`/blog/${post.id}`);
   };
 
   const handleBack = () => {
-    setSelectedPost(null);
+    navigate('/blog');
   };
 
   const parseBlogMarkdown = (text: string) => {
@@ -42,7 +62,7 @@ export default function BlogView({ onSelectCalculator, calculators }: BlogViewPr
                 return (
                   <button
                     key={pIdx}
-                    onClick={() => onSelectCalculator(calcId)}
+                    onClick={() => navigate(`/${calcId}`)}
                     className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline align-baseline"
                   >
                     {label} <Play className="h-2 w-2 fill-blue-600" />
@@ -140,7 +160,7 @@ export default function BlogView({ onSelectCalculator, calculators }: BlogViewPr
                 </p>
               </div>
               <button
-                onClick={() => onSelectCalculator(selectedPost.relatedCalculators[0])}
+                onClick={() => navigate(`/${selectedPost.relatedCalculators[0]}`)}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-1 shrink-0"
               >
                 Go to Calculator <ArrowRight className="h-3.5 w-3.5" />

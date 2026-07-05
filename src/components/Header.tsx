@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calculator, Search, Sun, Moon, Mic, MicOff, Star, Sparkles, BookOpen, User, Settings, X, Clock, Play } from 'lucide-react';
 import { CalculatorConfig } from '../types';
+import { navigate } from '../lib/router';
 
 interface HeaderProps {
-  currentView: string;
-  setView: (view: string) => void;
-  setSelectedCalculatorId: (id: string | null) => void;
+  currentPath: string;
   calculators: CalculatorConfig[];
   favoritesCount: number;
 }
 
-export default function Header({ currentView, setView, setSelectedCalculatorId, calculators, favoritesCount }: HeaderProps) {
+export default function Header({ currentPath, calculators, favoritesCount }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -85,8 +84,7 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
     setRecentSearches(updated);
     localStorage.setItem('recent_searches', JSON.stringify(updated));
 
-    setSelectedCalculatorId(calcId);
-    setView('calculator');
+    navigate(`/${calcId}`);
     setIsSearchFocused(false);
     setSearchQuery('');
   };
@@ -103,8 +101,11 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
     : [];
 
   const handleNavClick = (view: string) => {
-    setView(view);
-    setSelectedCalculatorId(null);
+    if (view === 'home') navigate('/');
+    else if (view === 'ai-assistant') navigate('/ai-assistant');
+    else if (view === 'blog') navigate('/blog');
+    else if (view === 'account') navigate('/favorites');
+    else if (view === 'admin') navigate('/admin');
   };
 
   return (
@@ -247,14 +248,14 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
         <nav className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => handleNavClick('home')}
-            className={`text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentView === 'home' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentPath === '/' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
           >
             Calculators
           </button>
           
           <button
             onClick={() => handleNavClick('ai-assistant')}
-            className={`flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentView === 'ai-assistant' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40 font-semibold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentPath === '/ai-assistant' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40 font-semibold' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
           >
             <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
             <span className="hidden sm:inline">AI Assistant</span>
@@ -262,7 +263,7 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
 
           <button
             onClick={() => handleNavClick('blog')}
-            className={`flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentView === 'blog' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentPath.startsWith('/blog') ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
           >
             <BookOpen className="h-4 w-4" />
             <span className="hidden lg:inline">Blog</span>
@@ -270,7 +271,7 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
 
           <button
             onClick={() => handleNavClick('account')}
-            className={`flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentView === 'account' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-1 text-sm font-medium px-3 py-2 rounded-xl transition-all ${currentPath === '/favorites' || currentPath === '/recent' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
           >
             <User className="h-4 w-4" />
             {favoritesCount > 0 && (
@@ -283,7 +284,7 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
 
           <button
             onClick={() => handleNavClick('admin')}
-            className={`text-sm font-medium p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all ${currentView === 'admin' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : ''}`}
+            className={`text-sm font-medium p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all ${currentPath === '/admin' ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40' : ''}`}
             title="Admin Dashboard"
           >
             <Settings className="h-4 w-4" />

@@ -114,10 +114,25 @@ export default function Header({ currentView, setView, setSelectedCalculatorId, 
         {/* Logo */}
         <div 
           onClick={() => handleNavClick('home')} 
-          className="flex items-center gap-2 cursor-pointer select-none group shrink-0"
+          className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
         >
-          <div className="p-2 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-500/20 group-hover:bg-blue-700 transition-colors">
-            <Calculator className="h-5 w-5" />
+          <div className="relative h-10 w-10 flex items-center justify-center bg-blue-50 dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm shadow-blue-500/10 group-hover:shadow-blue-500/20 group-hover:bg-blue-100 dark:group-hover:bg-slate-700 transition-all duration-300">
+            <img 
+              src="/logo.svg" 
+              alt="YourCalculation Logo" 
+              className="h-8 w-8 object-contain group-hover:scale-105 transition-transform duration-300"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent && !parent.querySelector('.logo-fallback')) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'logo-fallback text-blue-600 dark:text-blue-400 font-bold text-lg';
+                  fallback.innerText = 'Y';
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
           </div>
           <span className="font-display font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
             YourCalculation<span className="text-blue-500 font-sans">.com</span>

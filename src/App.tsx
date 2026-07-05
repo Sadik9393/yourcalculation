@@ -26,15 +26,11 @@ const categoryIconMap: Record<string, any> = {
   'Finance': DollarSign,
   'Health': Heart,
   'Math': Percent,
-  'Date & Time': Clock,
-  'Converters': Scale,
-  'Programming': Code,
   'Construction': Wrench,
   'Engineering': Cpu,
   'Education': Award,
   'Business': Briefcase,
   'Investment': TrendingUp,
-  'Tax': Percent,
   'Fitness': Activity,
   'Daily Life': Compass,
   'Science': FlaskConical,
@@ -45,6 +41,11 @@ export default function App() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
   const [preloadedInputs, setPreloadedInputs] = useState<Record<string, any> | null>(null);
+
+  // Scroll to top on navigation
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [currentPath]);
 
   // 1. Initialize favorites on startup
   useEffect(() => {

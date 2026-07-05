@@ -1,0 +1,6 @@
+{
+  "name": "YourCalculation.com",
+  "description": "Calculate Anything Smarter with AI. Free online calculators with instant results and AI-powered explanations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

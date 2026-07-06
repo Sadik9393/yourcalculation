@@ -49,7 +49,6 @@ export default function BlogView({ calculators }: BlogViewProps) {
       // Inline Link Parser for dynamically launching calculators from within the blog post!
       // Format: [Label](/calculator/calc-id)
       const linkRegex = /\[(.*?)\]\(\/calculator\/(.*?)\)/g;
-      let match;
       if (line.match(linkRegex)) {
         // Simple click trigger mapping
         return (
@@ -60,13 +59,17 @@ export default function BlogView({ calculators }: BlogViewProps) {
                 const label = part;
                 const calcId = line.split(linkRegex)[pIdx + 1];
                 return (
-                  <button
+                  <a
                     key={pIdx}
-                    onClick={() => navigate(`/${calcId}`)}
+                    href={`/${calcId}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(`/${calcId}`);
+                    }}
                     className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline align-baseline"
                   >
-                    {label} <Play className="h-2 w-2 fill-blue-600" />
-                  </button>
+                    {label} <Play className="h-2 w-2 fill-blue-600 animate-pulse" />
+                  </a>
                 );
               }
               if (pIdx % 3 === 2) {

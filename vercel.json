@@ -3,10 +3,10 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api"
+      "destination": "/api/index.ts"
     },
     {
-      "source": "/((?!api/|robots\\.txt|sitemap\\.xml|favicon\\.svg|logo\\.svg|logo\\.png|.*\\.[a-zA-Z0-9]+$).*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]

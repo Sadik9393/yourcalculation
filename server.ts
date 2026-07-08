@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 
@@ -31,7 +30,9 @@ if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
 }
 
 // Simple file-based database for persistence
-const DB_FILE = path.join(process.cwd(), 'db.json');
+const DB_FILE = process.env.VERCEL 
+  ? path.join('/tmp', 'db.json')
+  : path.join(process.cwd(), 'db.json');
 
 interface LocalDB {
   comments: any[];
@@ -461,6 +462,7 @@ app.post('/api/admin/deploy-trigger', async (req, res) => {
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     // Development Mode
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
